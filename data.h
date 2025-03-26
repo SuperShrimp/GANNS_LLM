@@ -4,6 +4,9 @@
 #include <vector>
 #include <string.h>
 #include <fstream>
+#include <string>
+#include <sstream>
+#include <cstring>
 
 using namespace std;
 
@@ -40,9 +43,64 @@ private:
         in_descriptor.close();
     }
 
+        //数据集不同，需要指定数据的维度？
+        void ReadVectorsFromTxt(string path, int point_dim)
+        {
+            ifstream file(path);
+            if(!file){
+                std::cerr<<"Can not open file!"<<std::endl;
+            }
+            //获取数据的维度
+            dim_of_point_ = point_dim;
+    
+            //获取文件大小
+            file.seekg(0, std::ios::end);
+            long long file_size = file.tellg();
+            file.seekg(0, std::ios::beg);
+    
+            //计算每行的大小，假设每个浮点数占用12个字符
+            long long estimated_line_size = point_dim * 12 + 1;
+            // num_of_points_ = file_size / estimated_line_size;
+            num_of_points_ = file_size / (dim_of_point_) / 4;
+
+            //分配内存
+            data_ = new float[dim_of_point_ * num_of_points_];
+            
+            //读取数据
+            string line;
+            int current_point = 0;
+    
+            while (getline(file, line) && current_point < num_of_points_) {
+                std::stringstream ss(line);
+                float value;
+                int dim_count = 0;
+                
+                // 读取一行中的所有数值
+                while (ss >> value && dim_count < dim_of_point_) {
+                    data_[current_point * dim_of_point_ + dim_count] = value;
+                    dim_count++;
+                }
+                
+                // 检查维度是否匹配 
+                if (dim_count != dim_of_point_) {
+                    std::cerr << "Dimension mismatch at line " << current_point + 1 << std::endl;
+                    exit(1);
+                }
+                
+                current_point++;
+                // std::cout<<"finish "<< current_point <<" points."<<endl;
+            }
+            
+            //更新实际的点数
+            num_of_points_ = current_point;
+    
+            file.close();
+        }
+
 public:
     Data(string path){
-        ReadVectorsFromFiles(path);
+        // ReadVectorsFromFiles(path);
+        ReadVectorsFromTxt(path, 1024);
     }
     
     float* GetFirstPositionofPoint(int point_id) const{
